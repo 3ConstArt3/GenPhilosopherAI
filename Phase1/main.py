@@ -5,7 +5,7 @@ import chardet
 # Convert the content of the files
 # into utf-8 format, to avoid unicode
 # errors, in the process.
-inputFolder = "Dataset/InitialData/"
+inputFolder = "Dataset/IData/"
 for filename in os.listdir(inputFolder):
 
     if filename.endswith(".txt"):
@@ -34,7 +34,7 @@ for filename in os.listdir(inputFolder):
 
         # Read the content of each file.
         joinedPath = os.path.join(inputFolder, filename)
-        with open(joinedPath, "r", encoding="utf-8") as initialFile:
+        with open(joinedPath, "r", encoding = "utf-8") as initialFile:
             quoteString = initialFile.readlines()
 
         # Convert the data to a JSON
@@ -53,7 +53,7 @@ for filename in os.listdir(inputFolder):
         # dictionary in a separate file.
         jsonData = js.dumps(data, indent = 4)
 
-        outputFolder = "Dataset/ProcessedData/"
+        outputFolder = "Dataset/PData/"
         filename = philosopher[0].upper() + philosopher[1:] + ".json"
         joinedPath = os.path.join(outputFolder, filename)
         with open(joinedPath, 'w') as jsonFile:
