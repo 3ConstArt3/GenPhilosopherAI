@@ -8,6 +8,7 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from autocorrect import Speller
+from math import sqrt
 
 # Download specific nltk resources, that
 # are necessary for the data preprocess step.
@@ -45,31 +46,92 @@ for filename in os.listdir(inputFolder):
             quote = value["quote"]
 
             # Convert each quote to lowercase.
-            lowerQuote = quote.lower()
+            loweredQuote = quote.lower()
 
             # Remove all punctuation from the quote.
-            cleanedQuote = lowerQuote.translate(str.maketrans("", "", string.punctuation))
+            cleanedQuote = loweredQuote.translate(str.maketrans("", "", string.punctuation))
 
             # Replace double spaces, with one space.
             singleSpacedQuote = cleanedQuote.replace("  ", " ")
 
             # Split quote, into individual words.
-            tokens = word_tokenize(singleSpacedQuote)
+            tokenizedQuote = word_tokenize(singleSpacedQuote)
 
             # Remove stopwords and lemmatize the quote.
-            newValue = [wordLemmatizer.lemmatize(word) for word in tokens
-                        if word not in stopWords and len(word) > 3]
+            lemmatizedQuote = [wordLemmatizer.lemmatize(token) for token in tokenizedQuote
+                               if token not in stopWords and len(token) > 3]
 
             # Remove any spelling mistakes.
-            correctValue = [speller(value) for value in newValue]
+            correctQuote = [speller(value) for value in lemmatizedQuote]
 
             # Now we save the final tokenized quote
             # into the new dictionary structure.
             newQuoteList[key] = {
-                "quote": correctValue,
+                "quote": correctQuote,
                 "author": value["author"]
             }
 
+        # Now we need to evaluate the total
+        # quote characters per file, to clean
+        # each dataset, from outliers.
+        totalQuoteCharacters = 0
+        for key, value in newQuoteList.items():
+
+            quote = value["quote"]
+
+            # Reconstruct the quote.
+            reconstructedQuote = ''.join(token for token in quote)
+
+            # Calculate its character length.
+            characterLength = len(reconstructedQuote)
+
+            # Add the length, to the total sum.
+            totalQuoteCharacters += characterLength
+
+        # Now we find the average
+        # length per quote.
+        totalQuotes = len(newQuoteList)
+        avgCharLenPerQuote = totalQuoteCharacters / totalQuotes
+
+        # Define the character length range
+        # for the quote cleaning process
+        # of the file.
+        n = avgCharLenPerQuote / sqrt(2)
+        lowerBound = avgCharLenPerQuote - n
+        upperBound = avgCharLenPerQuote + n
+
+        # We copy the dictionary, to avoid
+        # conflicts, when deleting outliers.
+        copyDictionary = newQuoteList.copy()
+        for key, value in newQuoteList.items():
+
+            quote = value["quote"]
+
+            reconstructedQuote = ''.join(token for token in quote)
+            characterLength = len(reconstructedQuote)
+
+            smallerThanMin = (characterLength < lowerBound)
+            biggerThanMax = (characterLength > upperBound)
+            quoteIsOutOfBounds = (smallerThanMin or biggerThanMax)
+            if quoteIsOutOfBounds: del copyDictionary[str(key)]
+
+        # Now we build up the final dictionary
+        # by assigning the correct keys, to
+        # the cleaned dataset.
+        newKey = 1
+        newQuoteList.clear()
+        for key, value in copyDictionary.items():
+
+            newQuoteList[newKey] = {
+                "quote": value["quote"],
+                "author": value["author"]
+            }
+
+            newKey += 1
+
+        # Finally, we save the dictionary to
+        # a JSON file, for later processing
+        # purposes.
         outputFolder = "Dataset/PData/"
         filename = "Author" + str(fileId) + ".json"
         joinedPath = os.path.join(outputFolder, filename)
